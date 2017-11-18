@@ -4,12 +4,12 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>io.csdn</groupId>
-	<artifactId>batch-demo</artifactId>
+	<artifactId>transitions-demo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>batch-demo</name>
-	<description>Demo project for Spring Boot</description>
+	<name>作业流跳转示例</name>
+	<description>Demo project for Spring Batch </description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
