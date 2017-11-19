@@ -6,8 +6,12 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.builder.JobStepBuilder;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
@@ -21,54 +25,52 @@ public class BatchConfig {
 
     private JobBuilderFactory jobBuilderFactory;
 
-    public BatchConfig(StepBuilderFactory stepBuilderFactory, JobBuilderFactory jobBuilderFactory) {
+    private JobLauncher jobLauncher;
+
+    private JobRepository jobRepository;
+
+    public BatchConfig(StepBuilderFactory stepBuilderFactory,
+                       JobBuilderFactory jobBuilderFactory,
+                       JobLauncher jobLauncher,
+                       JobRepository jobRepository) {
         this.stepBuilderFactory = stepBuilderFactory;
         this.jobBuilderFactory = jobBuilderFactory;
-    }
-
-    @Bean public Tasklet tasklet() {
-        return (step, chunk) -> {
-            System.out.println("步骤名：" + chunk.getStepContext().getStepName()
-                    + ", 线程：" + Thread.currentThread().getName());
-            return RepeatStatus.FINISHED;
-        };
+        this.jobLauncher = jobLauncher;
+        this.jobRepository = jobRepository;
     }
 
     @Bean public Step step1() {
         return this.stepBuilderFactory.get("step1").tasklet((stepContribution, chunkContext) -> {
-            System.out.println("步骤1 - 拆分及并行处理Flow, 步骤名：" + chunkContext.getStepContext().getStepName()
-                    + ", 线程：" + Thread.currentThread().getName());
+            System.out.println("内置Job步骤");
             return RepeatStatus.FINISHED;
         }).build();
     }
 
     @Bean public Step step2() {
-        return this.stepBuilderFactory.get("step2")
-                .tasklet(tasklet()).build();
+        return this.stepBuilderFactory.get("step2").tasklet((stepContribution, chunkContext) -> {
+            System.out.println("Job步骤");
+            return RepeatStatus.FINISHED;
+        }).build();
     }
 
-    @Bean public Step step3() {
-        return this.stepBuilderFactory.get("step3")
-                .tasklet(tasklet()).build();
-    }
-
-    @Bean public Flow flow1() {
-        return new FlowBuilder<Flow>("flow1")
-                .start(step2())
+    @Bean public Step childJobStep() {
+        return new JobStepBuilder(new StepBuilder("childJobStep"))
+                .job(childJob())
+                .launcher(this.jobLauncher)
+                .repository(jobRepository)
                 .build();
     }
 
-    @Bean public Flow flow2() {
-        return new FlowBuilder<Flow>("flow2")
-                .start(step3()).end();
+    @Bean public Job childJob() {
+        return this.jobBuilderFactory.get("childJob")
+                .start(step1())
+                .build();
     }
 
-    @Bean public Job splitJob() {
-        return this.jobBuilderFactory.get("splitJob")
-                .incrementer(new RunIdIncrementer())
-                .start(step1())
-                .split(new SimpleAsyncTaskExecutor())
-                .add(flow1(), flow2())
-                .end().build();
+    @Bean public Job parentJob() {
+        return this.jobBuilderFactory.get("parentJob")
+                .start(childJobStep())
+                .next(step2())
+                .build();
     }
 }
