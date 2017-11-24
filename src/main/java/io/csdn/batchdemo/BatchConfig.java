@@ -52,6 +52,14 @@ public class BatchConfig {
                 .tasklet(tasklet()).build();
     }
 
+    @Bean public Step step4() {
+        return this.stepBuilderFactory.get("step4")
+                .tasklet((stepContribution, chunkContext) -> {
+            System.out.println("====");
+            return RepeatStatus.FINISHED;
+                }).build();
+    }
+
     @Bean public Flow flow1() {
         return new FlowBuilder<Flow>("flow1")
                 .start(step2())
@@ -68,7 +76,9 @@ public class BatchConfig {
                 .incrementer(new RunIdIncrementer())
                 .start(step1())
                 .split(new SimpleAsyncTaskExecutor())
-                .add(flow1(), flow2())
+                .add(flow2(), flow1())
+
+                .next(step4())
                 .end().build();
     }
 }
