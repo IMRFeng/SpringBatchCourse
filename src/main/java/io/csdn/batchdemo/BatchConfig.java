@@ -14,34 +14,30 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class BatchConfig {
 
-    private StepBuilderFactory stepBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
 
-    private JobBuilderFactory jobBuilderFactory;
+    private final JobBuilderFactory jobBuilderFactory;
 
-    private JobLauncher jobLauncher;
-
-    private JobRepository jobRepository;
+    private final JobRepository jobRepository;
 
     public BatchConfig(StepBuilderFactory stepBuilderFactory,
                        JobBuilderFactory jobBuilderFactory,
-                       JobLauncher jobLauncher,
                        JobRepository jobRepository) {
         this.stepBuilderFactory = stepBuilderFactory;
         this.jobBuilderFactory = jobBuilderFactory;
-        this.jobLauncher = jobLauncher;
         this.jobRepository = jobRepository;
     }
 
-    @Bean public Step step1() {
+    @Bean public Step nestedStep() {
         return this.stepBuilderFactory.get("step1").tasklet((stepContribution, chunkContext) -> {
-            System.out.println("内置Job步骤");
+            System.out.println("嵌套Job步骤");
             return RepeatStatus.FINISHED;
         }).build();
     }
 
-    @Bean public Step step2() {
+    @Bean public Step parentStep() {
         return this.stepBuilderFactory.get("step2").tasklet((stepContribution, chunkContext) -> {
-            System.out.println("Job步骤");
+            System.out.println("父Job步骤");
             return RepeatStatus.FINISHED;
         }).build();
     }
@@ -49,21 +45,20 @@ public class BatchConfig {
     @Bean public Step childJobStep() {
         return new JobStepBuilder(new StepBuilder("childJobStep"))
                 .job(childJob())
-                .launcher(this.jobLauncher)
                 .repository(jobRepository)
                 .build();
     }
 
     @Bean public Job childJob() {
         return this.jobBuilderFactory.get("childJob")
-                .start(step1())
+                .start(nestedStep())
                 .build();
     }
 
     @Bean public Job parentJob() {
         return this.jobBuilderFactory.get("parentJob")
-                .start(childJobStep())
-                .next(step2())
+                .start(parentStep())
+                .next(childJobStep())
                 .build();
     }
 }
