@@ -1,15 +1,16 @@
 package io.csdn.batchdemo;
 
+import io.csdn.batchdemo.reader.DemoInputReader;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.Arrays;
 
 @Configuration
 public class BatchConfig {
@@ -24,23 +25,22 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean
-    @StepScope
-    public Tasklet tasklet(@Value("#{jobParameters['parameter']}") String parameter) {
-        return (stepContribution, chunkContext) -> {
-            System.out.println("接收到的参数为：" + parameter);
-            return RepeatStatus.FINISHED;
-        };
+    @Bean public DemoInputReader readItems() {
+        return new DemoInputReader(Arrays.asList("A", "B", "C", "D"));
     }
 
-    @Bean public Step step1() {
-        return this.stepBuilderFactory.get("step1")
-                .tasklet(tasklet(null)).build();
+    @Bean public Step chunkBasedStep() {
+        return this.stepBuilderFactory.get("chunkBasedStep")
+                .<String, String>chunk(1)
+                .reader(readItems())
+                .writer(list -> list.forEach(System.out::println))
+//                .allowStartIfComplete(true)
+                .build();
     }
 
-    @Bean public Job jobParametersJob() {
-        return this.jobBuilderFactory.get("jobParametersJob")
-                .start(step1())
+    @Bean public Job itemReaderJob() {
+        return this.jobBuilderFactory.get("itemReaderJob")
+                .start(chunkBasedStep())
                 .build();
     }
 }
