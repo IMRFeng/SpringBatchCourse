@@ -6,21 +6,22 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.LineMapper;
-import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
-import org.springframework.batch.item.file.mapping.DefaultLineMapper;
-import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
-import org.springframework.batch.item.file.transform.FieldSet;
-import org.springframework.batch.item.file.transform.LineTokenizer;
+import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.validation.BindException;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+import org.springframework.oxm.xstream.XStreamMarshaller;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class BatchConfig {
+
+    @Value("${spring.batch.chunk.size:5}")
+    private int chunkSize;
 
     private StepBuilderFactory stepBuilderFactory;
 
@@ -32,15 +33,15 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean public Job csvFileReaderJob() {
-        return this.jobBuilderFactory.get("csvFileReaderJob")
+    @Bean public Job xmlFileReaderJob() {
+        return this.jobBuilderFactory.get("xmlFileReaderJob")
                 .start(chunkBasedStep())
                 .build();
     }
 
     @Bean public Step chunkBasedStep() {
         return this.stepBuilderFactory.get("chunkBasedStep")
-                .<Customer, Customer>chunk(5)
+                .<Customer, Customer>chunk(chunkSize)
                 .reader(csvFileItemReader())
                 .writer(list -> list.forEach(System.out::println))
                 .allowStartIfComplete(true)
@@ -48,51 +49,33 @@ public class BatchConfig {
     }
 
     @Bean public ItemReader<Customer> csvFileItemReader() {
-        FlatFileItemReader<Customer> reader = new FlatFileItemReader<>();
+        StaxEventItemReader<Customer> reader = new StaxEventItemReader<>();
 
-        reader.setResource(new ClassPathResource("/data/us-500.csv"));
-        reader.setLinesToSkip(1);
-        reader.setLineMapper(this.createCustomerLineMapper());
+        reader.setResource(new ClassPathResource("/data/us-500.xml"));
+        reader.setFragmentRootElementName("customer");
+        reader.setUnmarshaller(this.createMarshallerViaXStream());
+//        reader.setUnmarshaller(this.createMarshallerViaJaxb());
 
         return reader;
     }
 
-    private LineMapper<Customer> createCustomerLineMapper() {
-        DefaultLineMapper<Customer> customerLineMapper = new DefaultLineMapper<>();
-
-        customerLineMapper.setLineTokenizer(this.createCustomerLineTokenizer());
-        customerLineMapper.setFieldSetMapper(new CustomerFieldSetMapper());
-//        customerLineMapper.setFieldSetMapper(this.createCustomerFieldSetMapper());
-        customerLineMapper.afterPropertiesSet();
-
-        return customerLineMapper;
-    }
-
-    private LineTokenizer createCustomerLineTokenizer() {
-        DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer();
-        tokenizer.setNames(new String[] {"first_name", "last_name", "company_name", "address", "city", "country",
-                "state", "zip", "phone1", "phone2", "email", "web"});
-        return tokenizer;
-    }
-
-    private FieldSetMapper<Customer> createCustomerFieldSetMapper() {
-        BeanWrapperFieldSetMapper<Customer> customerFieldSetMapper = new BeanWrapperFieldSetMapper<>();
-        customerFieldSetMapper.setTargetType(Customer.class);
-        return customerFieldSetMapper;
-    }
-
     /**
-     * 通过Customer的构造器来创建其对象，通常用于平面文件里的列名与对象属性不相同的情况
+     * JAXB 允许Java开发人员将Java类映射为XML表示方式（Java Architecture for XML Binding）
+     * @return
      */
-    private static class CustomerFieldSetMapper implements FieldSetMapper<Customer> {
+    private Jaxb2Marshaller createMarshallerViaJaxb() {
+        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
+        marshaller.setClassesToBeBound(Customer.class);
+        return marshaller;
+    }
 
-        @Override
-        public Customer mapFieldSet(FieldSet fieldSet) throws BindException {
-            return new Customer(fieldSet.readString("first_name"), fieldSet.readString("last_name"),
-                    fieldSet.readString("company_name"), fieldSet.readString("address"),
-                    fieldSet.readString("city"), fieldSet.readString("country"), fieldSet.readString("state"),
-                    fieldSet.readString("zip"), fieldSet.readString("phone1"), fieldSet.readString("phone2"),
-                    fieldSet.readString("email"), fieldSet.readString("web"));
-        }
+    private XStreamMarshaller createMarshallerViaXStream() {
+        XStreamMarshaller marshaller = new XStreamMarshaller();
+
+        Map<String, Class> aliases = new HashMap<>();
+        aliases.put("customer", Customer.class);
+        marshaller.setAliases(aliases);
+
+        return marshaller;
     }
 }

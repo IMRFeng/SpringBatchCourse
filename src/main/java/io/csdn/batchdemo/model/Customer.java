@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 
 /**
@@ -12,6 +13,7 @@ import java.io.Serializable;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+//@XmlRootElement(name = "customer")
 public class Customer implements Serializable {
     private String firstName;
     private String lastName;
@@ -24,5 +26,5 @@ public class Customer implements Serializable {
     private String phone1;
     private String phone2;
     private String email;
-    private String webUrl;
+    private String web;
 }
