@@ -46,7 +46,7 @@ public class BatchConfig {
     }
 
     @Bean public ItemReader<String> listItemReader() {
-        return new ListItemReader<>(Arrays.asList("a", "b", "c", "d", "e", "f"));
+        return new ListItemReader<>(Arrays.asList("a", "b", "c", null, "d", "e", "f"));
     }
 
     @Bean public ItemProcessor<String, String> itemProcessor() {
@@ -57,6 +57,9 @@ public class BatchConfig {
 
         @Override
         public String process(String item) throws Exception {
+            if (item.equals("a") || item.equalsIgnoreCase("b")) {
+                return null;
+            }
             return item.toUpperCase();
         }
     }
