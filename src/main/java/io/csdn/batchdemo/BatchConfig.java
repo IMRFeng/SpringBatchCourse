@@ -5,6 +5,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
@@ -14,6 +15,7 @@ import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.batch.item.file.transform.LineTokenizer;
+import org.springframework.batch.item.validator.ValidatingItemProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -42,6 +44,7 @@ public class BatchConfig {
         return this.stepBuilderFactory.get("chunkBasedStep")
                 .<Customer, Customer>chunk(5)
                 .reader(csvFileItemReader())
+                .processor(itemProcessor())
                 .writer(list -> list.forEach(System.out::println))
                 .allowStartIfComplete(true)
                 .build();
@@ -57,12 +60,17 @@ public class BatchConfig {
         return reader;
     }
 
+    @Bean public ValidatingItemProcessor<Customer> itemProcessor() {
+        ValidatingItemProcessor<Customer> customerValidatingItemProcessor = new ValidatingItemProcessor<>(new CustomerValidator());
+        customerValidatingItemProcessor.setFilter(true);
+        return customerValidatingItemProcessor;
+    }
+
     private LineMapper<Customer> createCustomerLineMapper() {
         DefaultLineMapper<Customer> customerLineMapper = new DefaultLineMapper<>();
 
         customerLineMapper.setLineTokenizer(this.createCustomerLineTokenizer());
-        customerLineMapper.setFieldSetMapper(new CustomerFieldSetMapper());
-//        customerLineMapper.setFieldSetMapper(this.createCustomerFieldSetMapper());
+        customerLineMapper.setFieldSetMapper(this.createCustomerFieldSetMapper());
         customerLineMapper.afterPropertiesSet();
 
         return customerLineMapper;
@@ -79,20 +87,5 @@ public class BatchConfig {
         BeanWrapperFieldSetMapper<Customer> customerFieldSetMapper = new BeanWrapperFieldSetMapper<>();
         customerFieldSetMapper.setTargetType(Customer.class);
         return customerFieldSetMapper;
-    }
-
-    /**
-     * 通过Customer的构造器来创建其对象，通常用于平面文件里的列名与对象属性不相同的情况
-     */
-    private static class CustomerFieldSetMapper implements FieldSetMapper<Customer> {
-
-        @Override
-        public Customer mapFieldSet(FieldSet fieldSet) throws BindException {
-            return new Customer(fieldSet.readString("first_name"), fieldSet.readString("last_name"),
-                    fieldSet.readString("company_name"), fieldSet.readString("address"),
-                    fieldSet.readString("city"), fieldSet.readString("country"), fieldSet.readString("state"),
-                    fieldSet.readString("zip"), fieldSet.readString("phone1"), fieldSet.readString("phone2"),
-                    fieldSet.readString("email"), fieldSet.readString("web"));
-        }
     }
 }

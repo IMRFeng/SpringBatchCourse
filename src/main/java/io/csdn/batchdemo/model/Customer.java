@@ -24,5 +24,5 @@ public class Customer implements Serializable {
     private String phone1;
     private String phone2;
     private String email;
-    private String webUrl;
+    private String web;
 }
