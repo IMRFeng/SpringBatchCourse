@@ -15,11 +15,15 @@ import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.batch.item.file.transform.LineTokenizer;
+import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.item.validator.ValidatingItemProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.validation.BindException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 public class BatchConfig {
@@ -34,13 +38,13 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean public Job csvFileReaderJob() {
-        return this.jobBuilderFactory.get("csvFileReaderJob")
+    @Bean public Job itemProcessorJob() throws Exception {
+        return this.jobBuilderFactory.get("itemProcessorJob")
                 .start(chunkBasedStep())
                 .build();
     }
 
-    @Bean public Step chunkBasedStep() {
+    @Bean public Step chunkBasedStep() throws Exception {
         return this.stepBuilderFactory.get("chunkBasedStep")
                 .<Customer, Customer>chunk(5)
                 .reader(csvFileItemReader())
@@ -60,10 +64,20 @@ public class BatchConfig {
         return reader;
     }
 
-    @Bean public ValidatingItemProcessor<Customer> itemProcessor() {
+    @Bean public ItemProcessor<Customer, Customer> itemProcessor() throws Exception {
+        List<ItemProcessor<Customer, Customer>> delegates = new ArrayList<>();
+
         ValidatingItemProcessor<Customer> customerValidatingItemProcessor = new ValidatingItemProcessor<>(new CustomerValidator());
-        customerValidatingItemProcessor.setFilter(true);
-        return customerValidatingItemProcessor;
+//        customerValidatingItemProcessor.setFilter(true);
+
+        delegates.add(new UpperCaseItemProcessor());
+        delegates.add(customerValidatingItemProcessor);
+
+        CompositeItemProcessor<Customer, Customer> compositeItemProcessor = new CompositeItemProcessor<>();
+        compositeItemProcessor.setDelegates(delegates);
+        compositeItemProcessor.afterPropertiesSet();
+
+        return compositeItemProcessor;
     }
 
     private LineMapper<Customer> createCustomerLineMapper() {
@@ -87,5 +101,15 @@ public class BatchConfig {
         BeanWrapperFieldSetMapper<Customer> customerFieldSetMapper = new BeanWrapperFieldSetMapper<>();
         customerFieldSetMapper.setTargetType(Customer.class);
         return customerFieldSetMapper;
+    }
+
+    private class UpperCaseItemProcessor implements ItemProcessor<Customer, Customer> {
+
+        @Override
+        public Customer process(Customer item) throws Exception {
+            return new Customer(item.getFirstName().toUpperCase(), item.getLastName(), item.getCompanyName(), item.getAddress(),
+                    item.getCity(), item.getCountry(), item.getState(), item.getZip(), item.getPhone1(), item.getPhone2(),
+                    item.getEmail(), item.getWeb());
+        }
     }
 }
