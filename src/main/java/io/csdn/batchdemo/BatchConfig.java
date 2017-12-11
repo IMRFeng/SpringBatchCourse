@@ -1,19 +1,27 @@
 package io.csdn.batchdemo;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.csdn.batchdemo.model.Customer;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.transform.LineAggregator;
+import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,40 +41,41 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean public Job xmlFileReaderJob() {
-        return this.jobBuilderFactory.get("xmlFileReaderJob")
+    @Bean public Job fileWriterJob() throws Exception {
+        return this.jobBuilderFactory.get("fileWriterJob")
                 .start(chunkBasedStep())
                 .build();
     }
 
-    @Bean public Step chunkBasedStep() {
+    @Bean public Step chunkBasedStep() throws Exception {
         return this.stepBuilderFactory.get("chunkBasedStep")
                 .<Customer, Customer>chunk(chunkSize)
-                .reader(csvFileItemReader())
-                .writer(list -> list.forEach(System.out::println))
+                .reader(xmlFileItemReader())
+                .writer(customerFlatFileItemWriter())
                 .allowStartIfComplete(true)
                 .build();
     }
 
-    @Bean public ItemReader<Customer> csvFileItemReader() {
+    @Bean public ItemReader<Customer> xmlFileItemReader() {
         StaxEventItemReader<Customer> reader = new StaxEventItemReader<>();
 
         reader.setResource(new ClassPathResource("/data/us-500.xml"));
         reader.setFragmentRootElementName("customer");
         reader.setUnmarshaller(this.createMarshallerViaXStream());
-//        reader.setUnmarshaller(this.createMarshallerViaJaxb());
 
         return reader;
     }
 
-    /**
-     * JAXB 允许Java开发人员将Java类映射为XML表示方式（Java Architecture for XML Binding）
-     * @return
-     */
-    private Jaxb2Marshaller createMarshallerViaJaxb() {
-        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
-        marshaller.setClassesToBeBound(Customer.class);
-        return marshaller;
+    @Bean public ItemWriter<Customer> customerFlatFileItemWriter() throws Exception {
+        FlatFileItemWriter<Customer> fileItemWriter = new FlatFileItemWriter<>();
+
+//        fileItemWriter.setLineAggregator(new PassThroughLineAggregator<>());
+        fileItemWriter.setLineAggregator(new CustomerLineAggregator());
+        String workingFolder = System.getProperty("user.dir");
+        fileItemWriter.setResource(new FileSystemResource(workingFolder.concat("/output/客户输出.json")));
+        fileItemWriter.afterPropertiesSet();
+
+        return fileItemWriter;
     }
 
     private XStreamMarshaller createMarshallerViaXStream() {
@@ -77,5 +86,13 @@ public class BatchConfig {
         marshaller.setAliases(aliases);
 
         return marshaller;
+    }
+
+    public class CustomerLineAggregator implements LineAggregator<Customer> {
+
+        @Override
+        public String aggregate(Customer item) {
+            return item.getFirstName() + " " + item.getLastName();
+        }
     }
 }
