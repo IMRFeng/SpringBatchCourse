@@ -6,11 +6,14 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 
@@ -33,22 +36,22 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean public Job xmlFileReaderJob() {
-        return this.jobBuilderFactory.get("xmlFileReaderJob")
+    @Bean public Job xmlFileWriterJob() throws Exception {
+        return this.jobBuilderFactory.get("xmlFileWriterJob")
                 .start(chunkBasedStep())
                 .build();
     }
 
-    @Bean public Step chunkBasedStep() {
+    @Bean public Step chunkBasedStep() throws Exception {
         return this.stepBuilderFactory.get("chunkBasedStep")
                 .<Customer, Customer>chunk(chunkSize)
-                .reader(csvFileItemReader())
-                .writer(list -> list.forEach(System.out::println))
+                .reader(xmlItemReader())
+                .writer(xmlItemWriter())
                 .allowStartIfComplete(true)
                 .build();
     }
 
-    @Bean public ItemReader<Customer> csvFileItemReader() {
+    @Bean public ItemReader<Customer> xmlItemReader() {
         StaxEventItemReader<Customer> reader = new StaxEventItemReader<>();
 
         reader.setResource(new ClassPathResource("/data/us-500.xml"));
@@ -57,6 +60,18 @@ public class BatchConfig {
 //        reader.setUnmarshaller(this.createMarshallerViaJaxb());
 
         return reader;
+    }
+
+    @Bean public ItemWriter<Customer> xmlItemWriter() throws Exception {
+        StaxEventItemWriter<Customer> writer = new StaxEventItemWriter<>();
+
+        writer.setRootTagName("tagName");
+        writer.setMarshaller(this.createMarshallerViaJaxb());
+        String path = System.getProperty("user.dir");
+        writer.setResource(new FileSystemResource(path.concat("/output/customer.xml")));
+        writer.afterPropertiesSet();
+
+        return writer;
     }
 
     /**
