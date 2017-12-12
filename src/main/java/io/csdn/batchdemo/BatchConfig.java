@@ -6,6 +6,10 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +18,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 
+import javax.persistence.EntityManagerFactory;
+import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,40 +29,69 @@ public class BatchConfig {
     @Value("${spring.batch.chunk.size:5}")
     private int chunkSize;
 
-    private StepBuilderFactory stepBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
 
-    private JobBuilderFactory jobBuilderFactory;
+    private final JobBuilderFactory jobBuilderFactory;
+
+    private final DataSource dataSource;
+
+    private final EntityManagerFactory entityManagerFactory;
 
     public BatchConfig(StepBuilderFactory stepBuilderFactory,
-                       JobBuilderFactory jobBuilderFactory) {
+                       JobBuilderFactory jobBuilderFactory,
+                       DataSource dataSource,
+                       EntityManagerFactory entityManagerFactory) {
         this.stepBuilderFactory = stepBuilderFactory;
         this.jobBuilderFactory = jobBuilderFactory;
+        this.dataSource = dataSource;
+        this.entityManagerFactory = entityManagerFactory;
     }
 
-    @Bean public Job xmlFileReaderJob() {
-        return this.jobBuilderFactory.get("xmlFileReaderJob")
+    @Bean public Job databaseWriterJob() throws Exception {
+        return this.jobBuilderFactory.get("databaseWriterJob")
                 .start(chunkBasedStep())
                 .build();
     }
 
-    @Bean public Step chunkBasedStep() {
+    @Bean public Step chunkBasedStep() throws Exception {
         return this.stepBuilderFactory.get("chunkBasedStep")
                 .<Customer, Customer>chunk(chunkSize)
-                .reader(csvFileItemReader())
-                .writer(list -> list.forEach(System.out::println))
+                .reader(xmlItemReader())
+                .writer(jpaItemWriter())
                 .allowStartIfComplete(true)
                 .build();
     }
 
-    @Bean public ItemReader<Customer> csvFileItemReader() {
+    @Bean public ItemReader<Customer> xmlItemReader() {
         StaxEventItemReader<Customer> reader = new StaxEventItemReader<>();
 
         reader.setResource(new ClassPathResource("/data/us-500.xml"));
         reader.setFragmentRootElementName("customer");
         reader.setUnmarshaller(this.createMarshallerViaXStream());
-//        reader.setUnmarshaller(this.createMarshallerViaJaxb());
 
         return reader;
+    }
+
+    @Bean public ItemWriter<Customer> jdbcItemWriter() {
+        JdbcBatchItemWriter<Customer> itemWriter = new JdbcBatchItemWriter<>();
+
+        itemWriter.setDataSource(this.dataSource);
+        itemWriter.setSql("INSERT INTO CUSTOMER(first_name, last_name, company_name, address, city, country, state, zip, " +
+                "phone1, phone2, email, web) VALUES(:firstName, :lastName, " +
+                ":companyName, :address, :city, :country, :state, :zip, :phone1, :phone2, :email, :web)");
+        itemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
+        itemWriter.afterPropertiesSet();
+
+        return itemWriter;
+    }
+
+    @Bean public ItemWriter<Customer> jpaItemWriter() throws Exception {
+        JpaItemWriter<Customer> itemWriter = new JpaItemWriter<>();
+
+        itemWriter.setEntityManagerFactory(this.entityManagerFactory);
+        itemWriter.afterPropertiesSet();
+
+        return itemWriter;
     }
 
     /**
