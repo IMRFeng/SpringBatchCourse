@@ -1,17 +1,14 @@
 package io.csdn.batchdemo.component;
 
 import io.csdn.batchdemo.dto.ReaderResponse;
-import io.csdn.batchdemo.exception.InvalidDataException;
 import io.csdn.batchdemo.model.Customer;
 import io.csdn.batchdemo.service.CustomerService;
-import org.apache.commons.collections.IteratorUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.Iterator;
 import java.util.List;
 
 /**

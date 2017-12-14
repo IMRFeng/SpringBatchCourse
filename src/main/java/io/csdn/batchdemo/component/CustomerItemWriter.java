@@ -19,9 +19,9 @@ public class CustomerItemWriter implements ItemWriter<List<Customer>> {
 
     @Override
     public void write(List<? extends List<Customer>> aggregateList) throws Exception {
-        if (this.i == 2) {
-            throw InvalidDataException.newInstance();
-        }
+//        if (this.i == 3) {
+//            throw InvalidDataException.newInstance();
+//        }
 
         for (List<Customer> customerList : aggregateList) {
             customerList.forEach(System.out::println);

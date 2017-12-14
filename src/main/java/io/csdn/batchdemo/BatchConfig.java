@@ -50,6 +50,7 @@ public class BatchConfig {
                 .reader(customerItemReader())
                 .writer(customerItemWriter())
 //                .allowStartIfComplete(true)
+//                .startLimit(6)
                 .build();
     }
 
