@@ -1,7 +1,8 @@
-package io.csdn.batchdemo;
+package io.csdn.batchdemo.config;
 
 import io.csdn.batchdemo.component.CustomerItemReader;
 import io.csdn.batchdemo.component.CustomerItemWriter;
+import io.csdn.batchdemo.exception.InvalidDataException;
 import io.csdn.batchdemo.listener.JobExecutionNotificationListener;
 import io.csdn.batchdemo.model.Customer;
 import org.springframework.batch.core.Job;
@@ -38,19 +39,21 @@ public class BatchConfig {
 
     @Bean public Job customerJob() {
         return this.jobBuilderFactory.get("customerJob")
-                .start(chunkBasedStep())
+                .start(retryChunkBasedStep())
                 .listener(jobExecutionNotificationListener)
-//                .preventRestart()
                 .build();
     }
 
-    @Bean public Step chunkBasedStep() {
-        return this.stepBuilderFactory.get("chunkBasedStep")
+    @Bean public Step retryChunkBasedStep() {
+        return this.stepBuilderFactory.get("retryChunkBasedStep")
                 .<List<Customer>, List<Customer>>chunk(chunkSize)
                 .reader(customerItemReader())
                 .writer(customerItemWriter())
-//                .allowStartIfComplete(true)
-//                .startLimit(6)
+                .faultTolerant()
+                .retry(InvalidDataException.class)
+                .retryLimit(5)
+                .noRetry(NullPointerException.class)
+                .allowStartIfComplete(true)
                 .build();
     }
 

@@ -1,6 +1,7 @@
 package io.csdn.batchdemo.component;
 
 import io.csdn.batchdemo.dto.ReaderResponse;
+import io.csdn.batchdemo.exception.InvalidDataException;
 import io.csdn.batchdemo.model.Customer;
 import io.csdn.batchdemo.service.CustomerService;
 import org.springframework.batch.item.ExecutionContext;
@@ -25,12 +26,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
     @Value("${spring.batch.read.size:100}")
     private int pageSize;
 
-    private boolean restart = false;
-
-    public CustomerItemReader() {
-        this.page = 0;
-    }
-
     @Override
     public List<Customer> read() throws Exception {
         if (this.page == -1) return null;
@@ -51,7 +46,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
         System.out.println("open..." + this.page);
         if (executionContext.containsKey("curPage")) {
             this.page = executionContext.getInt("curPage");
-            this.restart = true;
         } else {
             this.page = 0;
             executionContext.put("curPage", this.page);

@@ -15,19 +15,19 @@ public class CustomerItemWriter implements ItemWriter<List<Customer>> {
 
     private CustomerRepository customerRepository;
 
-    private int i = 0;
+    private int executionCount = 0;
 
     @Override
     public void write(List<? extends List<Customer>> aggregateList) throws Exception {
-//        if (this.i == 3) {
-//            throw InvalidDataException.newInstance();
-//        }
+        executionCount++;
+        if (executionCount >= 3 && executionCount <= 5) {
+            System.out.println("处理数据失败");
+            throw InvalidDataException.newInstance();
+        }
 
         for (List<Customer> customerList : aggregateList) {
             customerList.forEach(System.out::println);
         }
-
-        i++;
     }
 
     @Autowired
