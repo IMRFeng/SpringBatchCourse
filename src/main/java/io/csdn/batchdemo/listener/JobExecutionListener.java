@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 @Slf4j
-public class JobExecutionNotificationListener extends JobExecutionListenerSupport {
+public class JobExecutionListener extends JobExecutionListenerSupport {
 
     private StopWatch stopWatch;
 

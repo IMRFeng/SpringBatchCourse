@@ -3,7 +3,7 @@ package io.csdn.batchdemo.config;
 import io.csdn.batchdemo.component.CustomerItemReader;
 import io.csdn.batchdemo.component.CustomerItemWriter;
 import io.csdn.batchdemo.exception.InvalidDataException;
-import io.csdn.batchdemo.listener.JobExecutionNotificationListener;
+import io.csdn.batchdemo.listener.JobExecutionListener;
 import io.csdn.batchdemo.model.Customer;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -15,7 +15,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 @Configuration
 public class BatchConfig {
@@ -27,25 +29,25 @@ public class BatchConfig {
 
     private final JobBuilderFactory jobBuilderFactory;
 
-    private final JobExecutionNotificationListener jobExecutionNotificationListener;
+    private final JobExecutionListener jobExecutionListener;
 
     public BatchConfig(StepBuilderFactory stepBuilderFactory,
                        JobBuilderFactory jobBuilderFactory,
-                       JobExecutionNotificationListener executionNotificationListener) {
+                       JobExecutionListener jobExecutionListener) {
         this.stepBuilderFactory = stepBuilderFactory;
         this.jobBuilderFactory = jobBuilderFactory;
-        this.jobExecutionNotificationListener = executionNotificationListener;
+        this.jobExecutionListener = jobExecutionListener;
     }
 
     @Bean public Job customerJob() {
         return this.jobBuilderFactory.get("customerJob")
-                .start(retryChunkBasedStep())
-                .listener(jobExecutionNotificationListener)
+                .start(skipChunkBasedStep())
+                .listener(jobExecutionListener)
                 .build();
     }
 
-    @Bean public Step retryChunkBasedStep() {
-        return this.stepBuilderFactory.get("retryChunkBasedStep")
+    @Bean public Step skipChunkBasedStep() {
+        return this.stepBuilderFactory.get("skipChunkBasedStep")
                 .<List<Customer>, List<Customer>>chunk(chunkSize)
                 .reader(customerItemReader())
                 .writer(customerItemWriter())
@@ -53,7 +55,10 @@ public class BatchConfig {
                 .retry(InvalidDataException.class)
                 .retryLimit(5)
                 .noRetry(NullPointerException.class)
-                .allowStartIfComplete(true)
+                .skip(TimeoutException.class)
+                .skip(IOException.class)
+                .skipLimit(3)
+                .allowStartIfComplete(true) // 此处仅用于演示使用，建议在正式生产环境中删除
                 .build();
     }
 
