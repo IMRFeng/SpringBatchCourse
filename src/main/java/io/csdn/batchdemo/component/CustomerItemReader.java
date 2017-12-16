@@ -1,7 +1,6 @@
 package io.csdn.batchdemo.component;
 
 import io.csdn.batchdemo.dto.ReaderResponse;
-import io.csdn.batchdemo.exception.InvalidDataException;
 import io.csdn.batchdemo.model.Customer;
 import io.csdn.batchdemo.service.CustomerService;
 import org.springframework.batch.item.ExecutionContext;
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 /**
  * @author Zhantao Feng.
@@ -36,10 +34,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
 
             this.page++;
 
-            if (page == 12 || page == 13 || page == 14) {
-                System.out.println("读取数据出错喽");
-                throw new TimeoutException("出错啦， 超市异常");
-            }
             return response.getCustomers();
         }
 

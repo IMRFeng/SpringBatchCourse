@@ -3,6 +3,7 @@ package io.csdn.batchdemo.listener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.listener.JobExecutionListenerSupport;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 @Slf4j
-public class JobExecutionListener extends JobExecutionListenerSupport {
+public class JobExecutionTimeListener implements JobExecutionListener {
 
     private StopWatch stopWatch;
 

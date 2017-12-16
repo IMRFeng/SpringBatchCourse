@@ -2,8 +2,12 @@ package io.csdn.batchdemo.config;
 
 import io.csdn.batchdemo.component.CustomerItemReader;
 import io.csdn.batchdemo.component.CustomerItemWriter;
+import io.csdn.batchdemo.exception.CustomerSkipException;
 import io.csdn.batchdemo.exception.InvalidDataException;
-import io.csdn.batchdemo.listener.JobExecutionListener;
+import io.csdn.batchdemo.listener.CustomerChunkListener;
+import io.csdn.batchdemo.listener.CustomerSkipListener;
+import io.csdn.batchdemo.listener.JobExecutionTimeListener;
+import io.csdn.batchdemo.listener.StepCheckingListener;
 import io.csdn.batchdemo.model.Customer;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -29,36 +33,38 @@ public class BatchConfig {
 
     private final JobBuilderFactory jobBuilderFactory;
 
-    private final JobExecutionListener jobExecutionListener;
+    private final JobExecutionTimeListener jobExecutionTimeListener;
 
     public BatchConfig(StepBuilderFactory stepBuilderFactory,
                        JobBuilderFactory jobBuilderFactory,
-                       JobExecutionListener jobExecutionListener) {
+                       JobExecutionTimeListener jobExecutionTimeListener) {
         this.stepBuilderFactory = stepBuilderFactory;
         this.jobBuilderFactory = jobBuilderFactory;
-        this.jobExecutionListener = jobExecutionListener;
+        this.jobExecutionTimeListener = jobExecutionTimeListener;
     }
 
     @Bean public Job customerJob() {
         return this.jobBuilderFactory.get("customerJob")
                 .start(skipChunkBasedStep())
-                .listener(jobExecutionListener)
+                .listener(jobExecutionTimeListener)
                 .build();
     }
 
     @Bean public Step skipChunkBasedStep() {
         return this.stepBuilderFactory.get("skipChunkBasedStep")
+                .listener(new StepCheckingListener())
                 .<List<Customer>, List<Customer>>chunk(chunkSize)
                 .reader(customerItemReader())
                 .writer(customerItemWriter())
                 .faultTolerant()
-                .retry(InvalidDataException.class)
-                .retryLimit(5)
+                .retry(CustomerSkipException.class)
+                .retryLimit(3)
                 .noRetry(NullPointerException.class)
-                .skip(TimeoutException.class)
-                .skip(IOException.class)
-                .skipLimit(3)
+                .skip(CustomerSkipException.class)
+                .skipLimit(1)
                 .allowStartIfComplete(true) // 此处仅用于演示使用，建议在正式生产环境中删除
+                .listener(new CustomerSkipListener())
+                .listener(new CustomerChunkListener())
                 .build();
     }
 
