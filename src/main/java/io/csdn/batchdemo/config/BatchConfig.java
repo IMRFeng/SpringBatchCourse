@@ -18,6 +18,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,6 +29,18 @@ public class BatchConfig {
 
     @Value("${spring.batch.chunk.size:5}")
     private int chunkSize;
+
+    @Value("${thread.pool.core.pool.size}")
+    private int corePoolSize;
+
+    @Value("${thread.pool.max.pool.size}")
+    private int maxPoolSize;
+
+    @Value("${thread.pool.queue.capacity}")
+    private int queueCapacity;
+
+    @Value("${thread.pool.keep.alive.seconds}")
+    private int keepAliveSeconds;
 
     private final StepBuilderFactory stepBuilderFactory;
 
@@ -64,8 +77,19 @@ public class BatchConfig {
                 .skipLimit(1)
                 .allowStartIfComplete(true) // 此处仅用于演示使用，建议在正式生产环境中删除
                 .listener(new CustomerSkipListener())
-                .listener(new CustomerChunkListener())
+//                .listener(new CustomerChunkListener())
+                .taskExecutor(taskExecutor())
                 .build();
+    }
+
+    @Bean public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setCorePoolSize(corePoolSize);
+        threadPoolTaskExecutor.setMaxPoolSize(maxPoolSize);
+        threadPoolTaskExecutor.setQueueCapacity(queueCapacity);
+        threadPoolTaskExecutor.setKeepAliveSeconds(keepAliveSeconds);
+        threadPoolTaskExecutor.initialize();
+        return threadPoolTaskExecutor;
     }
 
     @Bean public ItemReader<List<Customer>> customerItemReader() {

@@ -26,7 +26,7 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
     private int pageSize;
 
     @Override
-    public List<Customer> read() throws Exception {
+    public synchronized List<Customer> read() throws Exception {
         if (this.page == -1) return null;
 
         if (response == null || response.hasNext()) {
@@ -44,7 +44,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        System.out.println("open..." + this.page);
         if (executionContext.containsKey("curPage")) {
             this.page = executionContext.getInt("curPage");
         } else {
@@ -55,7 +54,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
 
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-        System.out.println("update..." + this.page);
         executionContext.put("curPage", this.page);
     }
 
