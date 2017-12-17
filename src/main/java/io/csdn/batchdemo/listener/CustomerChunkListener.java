@@ -12,16 +12,16 @@ public class CustomerChunkListener implements ChunkListener {
 
     @Override
     public void beforeChunk(ChunkContext context) {
-        log.info("开始执行步骤{}", context.getStepContext().getStepName());
+        log.info("开始执行CHUNK{}", context.getStepContext().getStepName());
     }
 
     @Override
     public void afterChunk(ChunkContext context) {
-        log.info("结束执行步骤{}", context.getStepContext().getStepName());
+        log.info("结束执行CHUNK{}", context.getStepContext().getStepName());
     }
 
     @Override
     public void afterChunkError(ChunkContext context) {
-        log.error("执行步骤{}时出现异常", context.getStepContext().getStepName());
+        log.error("执行CHUNK{}时出现异常", context.getStepContext().getStepName());
     }
 }

@@ -1,5 +1,6 @@
 package io.csdn.batchdemo.config;
 
+import io.csdn.batchdemo.component.CustomerItemProcessor;
 import io.csdn.batchdemo.component.CustomerItemReader;
 import io.csdn.batchdemo.component.CustomerItemWriter;
 import io.csdn.batchdemo.exception.CustomerSkipException;
@@ -13,6 +14,9 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.integration.async.AsyncItemProcessor;
+import org.springframework.batch.integration.async.AsyncItemWriter;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,29 +60,30 @@ public class BatchConfig {
         this.jobExecutionTimeListener = jobExecutionTimeListener;
     }
 
-    @Bean public Job customerJob() {
+    @Bean public Job customerJob() throws Exception {
         return this.jobBuilderFactory.get("customerJob")
-                .start(skipChunkBasedStep())
+                .start(asyncChunkBasedStep())
                 .listener(jobExecutionTimeListener)
                 .build();
     }
 
-    @Bean public Step skipChunkBasedStep() {
-        return this.stepBuilderFactory.get("skipChunkBasedStep")
+    @Bean public Step asyncChunkBasedStep() throws Exception {
+        return this.stepBuilderFactory.get("asyncChunkBasedStep")
+                .allowStartIfComplete(true)// 此处仅用于演示使用，建议在正式生产环境中删除
                 .listener(new StepCheckingListener())
                 .<List<Customer>, List<Customer>>chunk(chunkSize)
                 .reader(customerItemReader())
-                .writer(customerItemWriter())
+                .processor(asyncCustomerProcessor())
+                .writer(asyncCustomerWriter())
                 .faultTolerant()
                 .retry(CustomerSkipException.class)
                 .retryLimit(3)
                 .noRetry(NullPointerException.class)
                 .skip(CustomerSkipException.class)
                 .skipLimit(1)
-                .allowStartIfComplete(true) // 此处仅用于演示使用，建议在正式生产环境中删除
                 .listener(new CustomerSkipListener())
 //                .listener(new CustomerChunkListener())
-                .taskExecutor(taskExecutor())
+//                .taskExecutor(taskExecutor())
                 .build();
     }
 
@@ -96,7 +101,26 @@ public class BatchConfig {
         return new CustomerItemReader();
     }
 
+    @Bean public ItemProcessor<List<Customer>, List<Customer>> itemProcessor() {
+        return new CustomerItemProcessor();
+    }
+
     @Bean public ItemWriter<List<Customer>> customerItemWriter() {
         return new CustomerItemWriter();
+    }
+
+    @Bean public AsyncItemProcessor asyncCustomerProcessor() throws Exception {
+        AsyncItemProcessor<List<Customer>, List<Customer>> asyncItemProcessor = new AsyncItemProcessor<>();
+        asyncItemProcessor.setDelegate(itemProcessor());
+        asyncItemProcessor.setTaskExecutor(taskExecutor());
+        asyncItemProcessor.afterPropertiesSet();
+        return asyncItemProcessor;
+    }
+
+    @Bean public AsyncItemWriter asyncCustomerWriter() throws Exception {
+        AsyncItemWriter<List<Customer>> asyncItemWriter = new AsyncItemWriter<>();
+        asyncItemWriter.setDelegate(customerItemWriter());
+        asyncItemWriter.afterPropertiesSet();
+        return asyncItemWriter;
     }
 }
