@@ -14,7 +14,10 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "CUSTOMER")
+@Table(name = "CUSTOMER_A")
+@NamedQueries({
+    @NamedQuery(name = "Customer.findAll", query = "select c from Customer c")
+})
 public class Customer implements Serializable {
     @Id
     @GeneratedValue

@@ -10,15 +10,13 @@ import java.util.List;
 /**
  * @author Zhantao Feng.
  */
-public class CustomerItemWriter implements ItemWriter<List<Customer>> {
+public class CustomerItemWriter implements ItemWriter<Customer> {
 
     private CustomerRepository customerRepository;
 
     @Override
-    public void write(List<? extends List<Customer>> aggregateList) {
-        for (List<Customer> customerList : aggregateList) {
-            customerList.forEach(System.out::println);
-        }
+    public void write(List<? extends Customer> aggregateList) {
+        aggregateList.forEach(System.out::println);
     }
 
     @Autowired
