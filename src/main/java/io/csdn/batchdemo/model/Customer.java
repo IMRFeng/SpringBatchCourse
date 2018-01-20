@@ -13,7 +13,7 @@ import java.io.Serializable;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-//@XmlRootElement(name = "customer")
+@XmlRootElement(name = "customer")
 public class Customer implements Serializable {
     private String firstName;
     private String lastName;
