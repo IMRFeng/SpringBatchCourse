@@ -3,7 +3,7 @@ package io.csdn.batchdemo.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.*;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
@@ -11,7 +11,6 @@ import org.springframework.batch.core.step.skip.SkipLimitExceededException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -28,19 +27,23 @@ public class BatchStartupController {
     /** The job launcher. */
     private JobLauncher jobLauncher;
 
+    private JobOperator jobOperator;
+
     /** The mac ScheduleEvent job. */
-    @Qualifier("anotherJob")
+    @Qualifier("stopJob")
     private Job anotherJob;
 
-    public BatchStartupController(JobLauncher jobLauncher, Job batchDemoJob) {
+    public BatchStartupController(JobLauncher jobLauncher,
+                                  Job batchDemoJob,
+                                  JobOperator jobOperator) {
         this.jobLauncher = jobLauncher;
         this.anotherJob = batchDemoJob;
+        this.jobOperator = jobOperator;
     }
 
-    @GetMapping("/launchBatchDemoJob")
-    public ResponseEntity<String> batchDemoJob(@RequestParam(value = "parameter", required = false) String parameter) throws JobRestartException,
-                                                    JobInstanceAlreadyCompleteException,
-                                                    JobParametersInvalidException {
+    @GetMapping("/{parameter}")
+    public ResponseEntity<String> batchDemoJob(@PathVariable(value = "parameter", required = false) String parameter) throws JobRestartException,
+            JobInstanceAlreadyCompleteException, JobParametersInvalidException {
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("parameter", parameter)
                 .addLong("time", System.currentTimeMillis()).toJobParameters();
@@ -65,8 +68,14 @@ public class BatchStartupController {
         }
     }
 
-    @ExceptionHandler({ JobRestartException.class, JobInstanceAlreadyCompleteException.class,
-            JobParametersInvalidException.class, SkipLimitExceededException.class, ResourceAccessException.class})
+    @DeleteMapping("/{executionId}")
+    public ResponseEntity<Boolean> stopJob(@PathVariable("executionId") Long executionId) throws NoSuchJobExecutionException, JobExecutionNotRunningException {
+        return new ResponseEntity<>(this.jobOperator.stop(executionId), HttpStatus.OK);
+    }
+
+    @ExceptionHandler({JobRestartException.class, JobInstanceAlreadyCompleteException.class,
+            JobParametersInvalidException.class, SkipLimitExceededException.class, ResourceAccessException.class,
+            NoSuchJobExecutionException.class, JobExecutionNotRunningException.class, JobInstanceAlreadyExistsException.class})
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public @ResponseBody String handleExceptions(Exception ex) {
         LOGGER.error("{} - the job running of batchDemoJob is failed with {}",
