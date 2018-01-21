@@ -1,7 +1,6 @@
 package io.csdn.batchdemo.component;
 
 import io.csdn.batchdemo.dto.ReaderResponse;
-import io.csdn.batchdemo.exception.InvalidDataException;
 import io.csdn.batchdemo.model.Customer;
 import io.csdn.batchdemo.service.CustomerService;
 import org.springframework.batch.item.ExecutionContext;
@@ -43,7 +42,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        System.out.println("open..." + this.page);
         if (executionContext.containsKey("curPage")) {
             this.page = executionContext.getInt("curPage");
         } else {
@@ -54,7 +52,6 @@ public class CustomerItemReader implements ItemStreamReader<List<Customer>> {
 
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-        System.out.println("update..." + this.page);
         executionContext.put("curPage", this.page);
     }
 
