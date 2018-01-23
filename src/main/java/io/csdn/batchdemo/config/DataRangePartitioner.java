@@ -22,8 +22,8 @@ public class DataRangePartitioner implements Partitioner {
 
     @Override
     public Map<String, ExecutionContext> partition(int gridSize) {
-        int min = jdbcTemplate.queryForObject("SELECT MIN(id) from CUSTOMER_A", Integer.class);
-        int max = jdbcTemplate.queryForObject("SELECT MAX(id) from CUSTOMER_A", Integer.class);
+        int min = jdbcTemplate.queryForObject("SELECT MIN(id) from DATA_SOURCE", Integer.class);
+        int max = jdbcTemplate.queryForObject("SELECT MAX(id) from DATA_SOURCE", Integer.class);
         int targetSize = (max - min) / gridSize + 1;
 
         Map<String, ExecutionContext> result = new HashMap<>();
