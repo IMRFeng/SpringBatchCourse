@@ -6,9 +6,8 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.integration.launch.JobLaunchRequest;
 import org.springframework.batch.integration.launch.JobLaunchingGateway;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.InboundChannelAdapter;
@@ -32,13 +31,11 @@ import java.io.File;
  */
 @Configuration
 @EnableIntegration
+@ConditionalOnProperty(value = "io.ftp.integration.job.enabled")
 public class FtpIntegrationConfig {
 
-    @Autowired
-    @Qualifier("xmlFileReaderJob")
-    private Job batchDemoJob;
+    private Job xmlFileReaderJob;
 
-    @Autowired
     private JobLauncher jobLauncher;
 
     public String OUTPUT_DIR = "output";
@@ -51,6 +48,12 @@ public class FtpIntegrationConfig {
 
     @Value("${ftp.password}")
     private String password;
+
+    public FtpIntegrationConfig(Job xmlFileReaderJob,
+                                JobLauncher jobLauncher) {
+        this.xmlFileReaderJob = xmlFileReaderJob;
+        this.jobLauncher = jobLauncher;
+    }
 
     @Bean public DefaultFtpSessionFactory ftpSessionFactory() {
         final DefaultFtpSessionFactory factory = new DefaultFtpSessionFactory();
@@ -94,7 +97,7 @@ public class FtpIntegrationConfig {
                 .addString("input.file", file.getAbsolutePath())
                 .addLong("time", System.currentTimeMillis())
                 .toJobParameters();
-        return new JobLaunchRequest(this.batchDemoJob, jobParameters);
+        return new JobLaunchRequest(this.xmlFileReaderJob, jobParameters);
     }
 
     @Bean

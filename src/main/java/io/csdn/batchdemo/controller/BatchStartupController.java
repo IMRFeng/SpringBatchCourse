@@ -28,13 +28,12 @@ public class BatchStartupController {
     /** The job launcher. */
     private JobLauncher jobLauncher;
 
-    /** The mac ScheduleEvent job. */
-    @Qualifier("anotherJob")
+    /** The job. */
     private Job anotherJob;
 
-    public BatchStartupController(JobLauncher jobLauncher, Job batchDemoJob) {
+    public BatchStartupController(JobLauncher jobLauncher, @Qualifier("anotherJob") Job anotherJob) {
         this.jobLauncher = jobLauncher;
-        this.anotherJob = batchDemoJob;
+        this.anotherJob = anotherJob;
     }
 
     @GetMapping("/launchBatchDemoJob")

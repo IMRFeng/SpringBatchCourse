@@ -1,4 +1,6 @@
 # Spring Batch 在线视频教程：http://edu.csdn.net/course/detail/6478
+## 定时启动作业
+默认为每天凌晨4点启动名为anotherJob的作业，可根据自己的需求在application.properties里面配置
 
 QQ群：685732078
 

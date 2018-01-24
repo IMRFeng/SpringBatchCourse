@@ -10,11 +10,9 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.oxm.xstream.XStreamMarshaller;
 
@@ -38,9 +36,7 @@ public class BatchConfig {
         this.jobBuilderFactory = jobBuilderFactory;
     }
 
-    @Bean
-    @Qualifier("xmlFileReaderJob")
-    public Job xmlFileReaderJob() {
+    @Bean public Job xmlFileReaderJob() {
         return this.jobBuilderFactory.get("xmlFileReaderJob")
                 .start(chunkBasedStep())
                 .next(deleteFileStep())
@@ -52,10 +48,7 @@ public class BatchConfig {
                 .tasklet(tasklet(null)).build();
     }
 
-    @Bean
-    @Qualifier("anotherJob")
-    @Primary
-    public Job anotherJob() {
+    @Bean public Job anotherJob() {
         return this.jobBuilderFactory.get("anotherJob")
                 .start(step1())
                 .build();
@@ -115,5 +108,4 @@ public class BatchConfig {
         File file = new File(fileName);
         return file.delete();
     }
-
 }
