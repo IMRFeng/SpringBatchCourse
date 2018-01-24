@@ -1,4 +1,4 @@
 # SpringBatchCourse
 This is the codebase for the course of Spring Batch
 
-## 作业流跳转
+## 数据处理 - 通过ItemProcessor实现数据验证示例代码
