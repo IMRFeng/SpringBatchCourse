@@ -29,6 +29,6 @@ QQ群：685732078
 
 
 ##课程各小节代码
-每节课内的内容具体请参考其他branches，例如 通过定时任务启动Job 代码在[start-job-scheduling](SpringBatchCourse/tree/start-job-scheduling/README.md) branch
+每节课内的内容具体请参考其他branches，例如 通过定时任务启动Job 代码在[start-job-scheduling](IVictorFeng/SpringBatchCourse/blob/start-job-scheduling/README.md) branch
 
 如有问题欢迎随时在群里提出并讨论
