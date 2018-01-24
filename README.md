@@ -1,4 +1,4 @@
 # SpringBatchCourse
 This is the codebase for the course of Spring Batch
 
-## 作业流跳转示例
+## 自定义决策者(Decider)代码示例
